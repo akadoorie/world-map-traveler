@@ -95,18 +95,22 @@ function App() {
   const uniqueCountries = new Set(visibleEntries.map(e => e.country));
   const countryCount = uniqueCountries.size;
 
-  // Calculate total days abroad
-  const calculateDays = (dateFrom, dateTo) => {
-    const from = new Date(dateFrom);
-    const to = new Date(dateTo);
-    const diffTime = Math.abs(to - from);
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; // +1 to include both start and end days
-    return diffDays;
+  // Calculate total days abroad as the number of distinct calendar dates
+  // covered by any visible entry, de-duplicating overlapping/nested ranges
+  const calculateTotalDaysAbroad = (entries) => {
+    const visitedDates = new Set();
+    entries.forEach(({ dateFrom, dateTo }) => {
+      let cursor = new Date(dateFrom);
+      const end = new Date(dateTo);
+      while (cursor <= end) {
+        visitedDates.add(cursor.toISOString().slice(0, 10));
+        cursor = new Date(cursor.getTime() + 24 * 60 * 60 * 1000);
+      }
+    });
+    return visitedDates.size;
   };
 
-  const totalDaysAbroad = visibleEntries.reduce((total, entry) => {
-    return total + calculateDays(entry.dateFrom, entry.dateTo);
-  }, 0);
+  const totalDaysAbroad = calculateTotalDaysAbroad(visibleEntries);
 
   // Get current country name, area, and year (the last entry in visibleEntries)
   const currentEntry = visibleEntries.length > 0 ? visibleEntries[visibleEntries.length - 1] : null;
