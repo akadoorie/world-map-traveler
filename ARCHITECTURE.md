@@ -3,38 +3,38 @@
 ## System Architecture
 
 ```
-┌────────────────────────────────────────────────────────────┐
+┌──────────────────────────────────────────────────────────────┐
 │                USER BROWSER (localhost:3000)                 │
-├────────────────────────────────────────────────────────────┤
-│  React Application                                            │
-│   App                                                          │
-│   ├── WorldMap          (Leaflet map, driven imperatively      │
-│   │                      via `L`, not through react-leaflet)   │
-│   ├── Controls          (timeline navigation)                  │
-│   ├── Counter           (counts + current-country badge)       │
-│   ├── AddCountryForm    (modal, shown conditionally)            │
-│   ├── Notification      (toasts, 0..n at a time)                │
-│   └── MapSourceToggle   (tile-provider dropdown)                 │
+├──────────────────────────────────────────────────────────────┤
+│  React Application                                           │
+│   App                                                        │
+│   ├── WorldMap          (Leaflet map, driven imperatively    │
+│   │                      via `L`, not through react-leaflet) │
+│   ├── Controls          (timeline navigation)                │
+│   ├── Counter           (counts + current-country badge)     │
+│   ├── AddCountryForm    (modal, shown conditionally)         │
+│   ├── Notification      (toasts, 0..n at a time)             │
+│   └── MapSourceToggle   (tile-provider dropdown)             │
 └────────────────────────────┬─────────────────────────────────┘
                               │ HTTP (Axios)
                               ↓
-┌────────────────────────────────────────────────────────────┐
+┌──────────────────────────────────────────────────────────────┐
 │               Flask Server (localhost:5000)                  │
-│                                                                │
-│  GET/POST /api/countries                                       │
-│  GET      /api/stats                                            │
-│  GET/POST /api/geocode-cache                                     │
-│  POST     /api/validate-location  → proxies to Nominatim           │
-│                                                                │
-│  parse_countries_file() / write_countries_file()                │
+│                                                              │
+│  GET/POST /api/countries                                     │
+│  GET      /api/stats                                         │
+│  GET/POST /api/geocode-cache                                 │
+│  POST     /api/validate-location  → proxies to Nominatim     │
+│                                                              │
+│  parse_countries_file() / write_countries_file()             │
 └────────────────────────────┬─────────────────────────────────┘
                               ↓
-┌────────────────────────────────────────────────────────────┐
+┌──────────────────────────────────────────────────────────────┐
 │                 Data Storage (JSON files)                    │
-│                                                                │
-│   server/countries.json      — travel entries                  │
-│   server/geocode_cache.json  — cached place → {lat, lon}         │
-└────────────────────────────────────────────────────────────┘
+│                                                              │
+│   server/countries.json      — travel entries                │
+│   server/geocode_cache.json  — cached place → {lat, lon}     │
+└──────────────────────────────────────────────────────────────┘
 ```
 
 Services the **browser talks to directly**, bypassing Flask entirely:
