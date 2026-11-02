@@ -1,107 +1,127 @@
 # World Map Traveler - Project Summary
 
 ## Overview
-A complete, production-ready web application for tracking and visualizing world travels with an interactive map interface.
+A web application for tracking and visualizing world travels with an interactive map interface, timeline navigation, and on-demand geocoding of specific places.
 
 ## What Has Been Built
 
 ### Backend (Python Flask)
-- ✅ RESTful API with 3 endpoints
-- ✅ Text file-based data storage (countries.txt)
-- ✅ CORS enabled for frontend communication
+- ✅ RESTful API covering 4 resource paths: `/api/countries`, `/api/stats`, `/api/geocode-cache`, `/api/validate-location`
+- ✅ JSON file-based data storage (`countries.json` + `geocode_cache.json`)
+- ✅ CORS enabled for frontend communication (currently no origin restriction — see Security Considerations)
 - ✅ Sample data auto-generation on first run
-- ✅ Error handling and validation
+- ✅ Error handling and required-field validation
+- ✅ Server-side proxy to OpenStreetMap Nominatim for geocoding and location-name validation
 
 ### Frontend (React + Leaflet.js)
-- ✅ Interactive world map with country boundaries
-- ✅ Real-time country highlighting
-- ✅ Timeline navigation (forward/backward)
+- ✅ Interactive world map with country boundaries, driven directly via the Leaflet (`L`) API
+- ✅ Real-time country highlighting (unvisited / previously visited / current)
+- ✅ Configurable basemap — 6 switchable tile providers
+- ✅ Timeline navigation (forward/backward/first/last)
 - ✅ Keyboard controls (Arrow keys)
-- ✅ Country counter with unique counting
+- ✅ Country counter with unique counting, plus total days abroad and a current country/area/year badge
 - ✅ Hover tooltips with visit details
-- ✅ Modal form for adding new visits
+- ✅ Place markers geocoded on demand, with Google Maps links
+- ✅ Modal form for adding new visits, with live country/place validation against Nominatim before saving
+- ✅ Toast notifications for non-fatal data issues (bad country name, invalid date range, geocoding failures)
+- ✅ Manual refresh button to re-fetch data from disk
 - ✅ Professional UI with animations
 - ✅ Loading and error states
 
 ### Features Implemented
 
 1. **Map Visualization**
-   - Ocean color: Light blue (#a8daff)
-   - Land color: Light gray (#e0e0e0)
-   - Visited countries: Purple gradient (#667eea)
+   - Highlight colors (set in `WorldMap.js`, independent of the basemap): unvisited land tan (`#d2b48c`), previously visited teal (`#10b981`), current country red (`#ef4444`)
+   - Basemap imagery (and therefore ocean/land color) comes from whichever of the 6 tile providers is selected
    - Visible country borders
    - Smooth animations
 
-2. **Navigation System**
-   - Arrow key controls (Left/Right)
+2. **Configurable Map Sources**
+   - Dropdown (top-right of the map) to switch between ArcGIS Ocean, OpenStreetMap, Stamen Terrain, CartoDB Positron, Esri Satellite, and CartoDB Dark
+   - Defined in `mapConfig.js`; switching swaps the Leaflet tile layer in place, no reload
+
+3. **Navigation System**
+   - Arrow key controls (Left/Right) plus first/last jump buttons
    - On-screen navigation buttons
    - Progress indicator (e.g., "3/8")
    - Disabled state when at start/end
 
-3. **Country Counter**
-   - Displays unique countries visited
-   - Updates in real-time as you navigate
-   - Animated display in header
+4. **Country Counter & Current-Position Badge**
+   - Unique countries visited, updated in real time
+   - Total days abroad across all visible visits
+   - Current country, optional area/region, and year of the current timeline position
 
-4. **Interactive Tooltips**
+5. **Interactive Tooltips**
    - Shows on hover over visited countries
-   - Displays visit dates
-   - Lists specific places visited
+   - Lists every visit's dates and places for that country
    - Beautiful popup design
 
-5. **Place Markers**
-   - Red dots marking specific locations
+6. **Place Markers**
+   - Red dots marking specific locations, geocoded on demand via Nominatim and cached server-side
    - Click markers to view place details
    - Google Maps integration with "Open in Google Maps" link
    - Opens exact coordinates in new browser tab
 
-6. **Add Visit Form**
+7. **Add Visit Form**
    - Modal dialog with smooth animation
-   - Date validation
-   - Place parsing (comma-separated)
-   - Error handling
-   - Success feedback
+   - Country, optional area, date range, and comma-separated places
+   - Live validation: country and every place are checked against Nominatim before the visit is saved (sequential, ~1 request/second)
+   - Error handling and success feedback
+
+8. **Data Warnings**
+   - Dismissible toast notifications surface unresolved country names, invalid date ranges, and geocoding failures instead of failing silently
+   - Each distinct warning is only shown once per session
 
 ## Files Created
 
 ### Server Files
 ```
 server/
-├── app.py                  # Flask application (96 lines)
-├── requirements.txt        # Python dependencies
-└── countries.txt          # Auto-generated sample data
+├── app.py                      # Flask application (~310 lines)
+├── requirements.txt            # Python dependencies
+├── countries.json              # Travel data (git-ignored)
+├── countries.json.example      # Template for travel data
+├── geocode_cache.json          # Geocoding cache (git-ignored)
+└── geocode_cache.json.example  # Template for the geocode cache
 ```
 
 ### Client Files
 ```
 client/
 ├── public/
-│   └── index.html         # HTML template
+│   └── index.html              # HTML template
 ├── src/
 │   ├── components/
-│   │   ├── WorldMap.js            # Map component (155 lines)
-│   │   ├── WorldMap.css           # Map styles
-│   │   ├── Controls.js            # Navigation (46 lines)
-│   │   ├── Controls.css           # Control styles
-│   │   ├── Counter.js             # Counter component (14 lines)
-│   │   ├── Counter.css            # Counter styles
-│   │   ├── AddCountryForm.js      # Add form (111 lines)
-│   │   └── AddCountryForm.css     # Form styles
-│   ├── App.js             # Main application (87 lines)
-│   ├── App.css            # App styles
-│   ├── index.js           # React entry point
-│   └── index.css          # Global styles
-└── package.json           # Dependencies
+│   │   ├── WorldMap.js          # Map component (~440 lines)
+│   │   ├── WorldMap.css
+│   │   ├── Controls.js          # Navigation (~75 lines)
+│   │   ├── Controls.css
+│   │   ├── Counter.js           # Counter + current-country badge (~35 lines)
+│   │   ├── Counter.css
+│   │   ├── AddCountryForm.js    # Add form (~220 lines)
+│   │   ├── AddCountryForm.css
+│   │   ├── Notification.js      # Toast notifications (~20 lines)
+│   │   ├── Notification.css
+│   │   ├── MapSourceToggle.js   # Tile source dropdown (~80 lines)
+│   │   └── MapSourceToggle.css
+│   ├── mapConfig.js             # Tile provider registry
+│   ├── App.js                  # Main application (~205 lines)
+│   ├── App.css
+│   ├── index.js                 # React entry point
+│   └── index.css
+└── package.json                 # Dependencies
 ```
 
-### Documentation
+### Scripts & Documentation
 ```
-├── README.md              # Comprehensive documentation
-├── QUICKSTART.md          # Quick start guide
-├── PROJECT_SUMMARY.md     # This file
-├── .gitignore            # Git ignore rules
-├── start-server.bat      # Windows server launcher
-└── start-client.bat      # Windows client launcher
+├── scripts/                # Windows .bat and Git Bash/WSL .sh start/stop launchers
+├── README.md                # Comprehensive documentation
+├── QUICKSTART.md            # Quick start guide
+├── PROJECT_SUMMARY.md       # This file
+├── ARCHITECTURE.md          # Architecture deep-dive
+├── TESTING_GUIDE.md         # Manual QA checklist (no automated test suite exists)
+├── CLAUDE.md                # Guidance for Claude Code in this repo
+└── .gitignore                # Git ignore rules
 ```
 
 ## Technology Decisions
@@ -127,49 +147,44 @@ client/
 - Rich ecosystem
 - Easy state management
 
-### Why Text File Storage?
+### Why JSON File Storage?
 - Simple and human-readable
 - Easy to edit manually
 - No database setup required
-- Version control friendly
-- Meets requirements perfectly
+- Version control friendly (the data files themselves are git-ignored, but the format is diff-friendly)
+- Fine at the single-user, hundreds-of-entries scale this app targets — see ARCHITECTURE.md for scaling notes
 
 ## Design Patterns Applied
 
-### SOLID Principles
-1. **Single Responsibility**: Each component has one clear purpose
-2. **Open/Closed**: Components are extensible without modification
-3. **Liskov Substitution**: Props are properly typed and validated
-4. **Interface Segregation**: Components receive only needed props
-5. **Dependency Inversion**: Components depend on abstractions (props)
-
 ### React Best Practices
 - Functional components with hooks
-- Proper state management
-- Effect cleanup
+- State and derived values kept at the top (`App.js`), passed down as props
+- Effect cleanup (e.g. the Leaflet map instance is removed on unmount)
 - Conditional rendering
-- Error boundaries concept
+- One deliberate exception: `WorldMap.js` steps outside React's declarative model and drives Leaflet imperatively via refs, since Leaflet owns DOM it manages itself
+
+Note: component props are not runtime-validated — there's no PropTypes or TypeScript in this codebase, so prop "contracts" are enforced by convention/review, not by tooling.
 
 ### API Design
 - RESTful conventions
-- Consistent response format
+- Consistent `{success, data | error}` response envelope
 - Proper HTTP methods
 - Error handling
-- CORS configuration
+- CORS enabled (see Security Considerations for the current, permissive configuration)
 
 ## Color Scheme
 
 ```css
-/* Primary Colors */
-Background:      #f5f5f5    (Light gray)
-Primary:         #667eea    (Purple-blue)
-Secondary:       #764ba2    (Deep purple)
+/* UI Colors */
+Background:      #f5f5f5    (Light gray, app background)
+Primary:         #667eea    (Purple-blue, header gradient + buttons)
+Secondary:       #764ba2    (Deep purple, header gradient)
 
-/* Map Colors */
-Ocean:           #a8daff    (Light blue)
-Land:            #e0e0e0    (Light gray)
-Visited:         #667eea    (Purple-blue)
-Borders:         #9e9e9e    (Medium gray)
+/* Map Highlight Colors (WorldMap.js `style()` function) */
+Unvisited land:  #d2b48c    (Tan)
+Visited:         #10b981    (Teal/green)
+Current country: #ef4444    (Red)
+Map fallback bg: #a8daff    (Light blue, shown behind the Leaflet container before tiles load)
 
 /* Text Colors */
 Dark:            #2d3748    (Near black)
@@ -177,21 +192,25 @@ Medium:          #4a5568    (Gray)
 Light:           #718096    (Light gray)
 ```
 
+Note: the ocean/land colors a user actually sees depend on the selected tile provider (`mapConfig.js`), not on fixed CSS — `#a8daff` is only a brief fallback background, not the rendered ocean.
+
 ## Performance Optimizations
 
-1. **Lazy Loading**: Map tiles loaded on demand
-2. **State Management**: Minimal re-renders
-3. **Event Cleanup**: Proper cleanup in useEffect
+1. **Lazy Loading**: Map tiles loaded on demand by Leaflet as you pan/zoom
+2. **State Management**: Derived values (counts, days abroad, visible entries) are computed per render instead of duplicated in state
+3. **Event Cleanup**: Proper cleanup in `useEffect` (map instance teardown, click-outside listeners)
 4. **CSS Animations**: Hardware-accelerated transforms
-5. **Efficient GeoJSON**: Single layer management
+5. **Geocode Caching**: Place coordinates are cached server-side so repeat visits to the same place skip the Nominatim round-trip entirely
+
+The dominant real-world latency in this app is **not** rendering — it's the deliberate ~1 request/second throttle on Nominatim calls for geocoding and location validation. Adding a visit with several places, or loading a country with many ungeocoded places for the first time, takes on the order of seconds, proportional to place count, by design (to respect Nominatim's usage policy).
 
 ## Browser Compatibility
 
-Tested and works on:
-- ✅ Chrome 90+
-- ✅ Firefox 88+
-- ✅ Edge 90+
-- ✅ Safari 14+
+No automated cross-browser test matrix has been run. The client is a standard Create React App build; its `package.json` targets:
+- Production: `>0.2%`, `not dead`, `not op_mini all` (browserslist)
+- Development: last 1 version of Chrome, Firefox, and Safari
+
+It uses no exotic browser APIs beyond what Leaflet and Axios require, so it should work on current evergreen browsers, but this hasn't been formally verified across versions.
 
 ## Data Flow
 
@@ -204,7 +223,7 @@ Axios HTTP Request
     ↓
 Flask API Endpoint
     ↓
-countries.txt File
+countries.json File
     ↓
 Flask Response
     ↓
@@ -213,13 +232,15 @@ React State Update
 UI Re-render
 ```
 
+This is the simple case. See `ARCHITECTURE.md` for the fuller picture, including the parallel GeoJSON/geocode-cache load on mount and the sequential Nominatim validation chain when adding a visit.
+
 ## Security Considerations
 
-1. **Input Validation**: All form inputs validated
-2. **Date Validation**: Ensures logical date ranges
-3. **CORS**: Properly configured for local development
-4. **XSS Prevention**: React's built-in protection
-5. **Error Handling**: No sensitive data in error messages
+1. **Input Validation**: Required fields and date ordering checked client-side; country/place existence checked live against Nominatim; required-field check repeated server-side
+2. **CORS**: `flask-cors` is applied with no origin allowlist — any origin can currently call the API. Fine for a single-user localhost app, but would need tightening before being exposed beyond localhost
+3. **XSS Prevention**: React's built-in escaping for rendered text; note that `WorldMap.js` does build some popup HTML via string concatenation (`layer.bindPopup(...)`) rather than React, so it relies on the underlying data (country/place names, dates) being trusted input rather than on React's escaping
+4. **Error Handling**: No sensitive data in error messages
+5. **Secrets**: No API keys are used anywhere (Nominatim and the GeoJSON source are both free/keyless), so there's nothing to leak via config
 
 ## Future Enhancement Ideas
 
@@ -243,53 +264,46 @@ UI Re-render
 
 ## Testing Checklist
 
+There is no automated test suite (no Jest tests in `client/src`, no pytest config for the server). `TESTING_GUIDE.md` is the manual, click-through checklist this list summarizes.
+
 ### Manual Testing
-- ✅ Server starts without errors
-- ✅ Client starts and opens browser
-- ✅ Map loads with correct styling
-- ✅ Navigation buttons work
-- ✅ Keyboard controls work
-- ✅ Country highlighting works
-- ✅ Tooltips show correct data
-- ✅ Counter updates correctly
-- ✅ Add form validates input
-- ✅ Add form saves data
-- ✅ Data persists after restart
+- [ ] Server starts without errors
+- [ ] Client starts and opens browser
+- [ ] Map loads with correct highlight styling
+- [ ] Map source dropdown switches basemaps correctly
+- [ ] Navigation buttons and keyboard controls work
+- [ ] Country highlighting works (unvisited/visited/current)
+- [ ] Tooltips show correct dates/places
+- [ ] Counter, days-abroad, and current-country badge update correctly
+- [ ] Add form validates required fields and date ordering
+- [ ] Add form rejects unresolvable country/place names (Nominatim validation)
+- [ ] Add form saves data and the new entry persists after a page refresh
+- [ ] Refresh button re-loads data from disk
 
 ### Integration Testing
-- ✅ API endpoints return correct data
-- ✅ CORS works between client/server
-- ✅ File operations work correctly
-- ✅ State updates trigger re-renders
-- ✅ Map updates with new data
-
-## Performance Metrics
-
-- **Initial Load**: < 3 seconds
-- **Map Render**: < 1 second
-- **Navigation**: Instant
-- **Add Entry**: < 500ms
-- **Tooltip Display**: Instant
+- [ ] API endpoints return the expected `{success, data|error}` shape
+- [ ] CORS works between client and server
+- [ ] File operations (`countries.json`, `geocode_cache.json`) work correctly
+- [ ] State updates trigger the expected re-renders
+- [ ] Map updates with new/changed data
 
 ## Code Quality
 
-- **Total Lines**: ~1000 lines of custom code
-- **Comments**: Key sections documented
+- **Total size**: ~2,300 lines across `client/src` and `server/app.py` (per `wc -l`)
 - **Naming**: Descriptive and consistent
-- **Structure**: Organized and modular
-- **Styling**: Consistent and maintainable
+- **Structure**: Organized and modular, one component per concern
+- **Styling**: One CSS file per component
+- **Type safety**: None — no PropTypes or TypeScript; prop shapes are implicit
 
-## Deployment Ready
+## Current State
 
-The application is production-ready with:
-- ✅ Error handling
-- ✅ Loading states
-- ✅ Input validation
-- ✅ Responsive design
-- ✅ Clean code structure
-- ✅ Documentation
-- ✅ Sample data
-- ✅ Easy setup
+This is a solid, working app for a single local user tracking their own travel history — not a hardened, multi-user production deployment. Known gaps if that were ever the goal:
+- The frontend hardcodes `http://localhost:5000` in three different places instead of one shared config
+- CORS has no origin restriction
+- No authentication, and no automated test coverage
+- Several of the "Future Enhancement Ideas" above (edit/delete, export, search) are genuinely not implemented yet
+
+For local personal use, it's complete: setup is quick, sample data is provided, and the core loop (navigate timeline → see map → add a visit) works end to end.
 
 ## Getting Started
 
@@ -301,9 +315,3 @@ The application is production-ready with:
 5. Open http://localhost:3000
 
 **See QUICKSTART.md for detailed instructions.**
-
----
-
-**Project Status: COMPLETE ✅**
-
-All requirements have been implemented and tested. The application is ready for use!

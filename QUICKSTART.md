@@ -29,14 +29,22 @@ cd client
 npm install
 ```
 
+That's it for setup — `server/countries.json` is created automatically with sample data the first time the server runs if it doesn't already exist. If you want to start from the committed templates instead (e.g. to also get an empty `geocode_cache.json`), run:
+
+```bash
+cd server
+cp countries.json.example countries.json
+cp geocode_cache.json.example geocode_cache.json
+```
+
 ## Running the Application
 
 ### Option A: Using Batch Scripts (Windows)
 
 **Easiest method for Windows users:**
 
-1. Double-click `start-server.bat` to start the backend
-2. Double-click `start-client.bat` to start the frontend
+1. Double-click `scripts\start-server.bat` to start the backend
+2. Double-click `scripts\start-client.bat` to start the frontend
 3. Your browser will open automatically at http://localhost:3000
 
 ### Option B: Using Terminal Commands
@@ -63,19 +71,20 @@ Your browser will automatically open to http://localhost:3000
 ## First Time Using the App
 
 1. **View the Map**: You'll see a world map with the first visited country highlighted
-2. **Navigate**: Use the Right Arrow key or click the right button to move through your travel history
+2. **Navigate**: Use the Right Arrow key or click the right/first/last buttons to move through your travel history
 3. **Hover**: Move your mouse over visited countries to see details
-4. **Add Visit**: Click "+ Add Visit" button to add a new country
+4. **Switch Basemaps**: Click the map-style button in the top-right of the map to pick a different tile provider
+5. **Add Visit**: Click "+ Add Visit" to add a new country
 
 ## Testing All Features
 
 ### ✓ Navigation
 - Press **Right Arrow** key → Country counter should increase
 - Press **Left Arrow** key → Go back in history
-- Keep pressing Right Arrow until you reach the end
+- Click the "jump to first/last" buttons to skip to either end
 
 ### ✓ Country Details
-- Hover over any blue (visited) country
+- Hover over any highlighted (visited) country
 - You should see a popup with dates and places
 
 ### ✓ Place Markers
@@ -83,19 +92,25 @@ Your browser will automatically open to http://localhost:3000
 - Click on a red dot to see place details
 - Click "Open in Google Maps" to view the location in Google Maps
 
+### ✓ Counters
+- The header shows unique countries visited, total days abroad, and the current country/area/year for your position in the timeline
+
+### ✓ Map Source Toggle
+- Click the dropdown button in the top-right of the map and switch between ArcGIS Ocean, OpenStreetMap, Stamen Terrain, CartoDB Positron, Esri Satellite, and CartoDB Dark
+
 ### ✓ Add New Country
 1. Click "+ Add Visit" button
 2. Fill in: Country = "Greece", From = "2023-07-01", To = "2023-07-10", Places = "Athens, Santorini"
 3. Click "Add Visit"
-4. Press Right Arrow to navigate to your new entry
+4. The app validates the country and each place against OpenStreetMap before saving (roughly 1 request/second per name), so this can take a few seconds for multiple places
+5. Press Right Arrow to navigate to your new entry
 
-### ✓ Country Counter
-- Start at position 1 → Counter shows 1
-- Navigate to end → Counter shows total unique countries
+### ✓ Refresh
+- Click the "Refresh" button in the header to re-read `countries.json` from disk without restarting the server
 
 ## Sample Data Included
 
-The app comes with 5 sample visits:
+The app comes with 5 sample visits (auto-generated in `countries.json` on first run):
 1. France (Paris, Alsace) - Jan 2020
 2. Italy (Rome, Venice) - Jun 2020
 3. Spain (Barcelona, Madrid) - Mar 2021
@@ -107,26 +122,30 @@ The app comes with 5 sample visits:
 ### Server won't start
 - **Error: Port 5000 in use**
   - Kill the process using port 5000, or
-  - Edit `server/app.py`, change `port=5000` to `port=5001`
+  - Edit `server/app.py`, change `port=5000` to `port=5001` (and update the client's API URLs to match — see README)
 
 ### Client won't start
 - **Error: Dependencies not found**
   - Run `npm install` in the client directory again
 
 ### Map doesn't load
-- **Check internet connection** (map data is loaded from GitHub)
+- **Check internet connection** (country borders and tile images are both loaded from external sources, not from the Flask server)
 - **Check browser console** (F12) for errors
 
 ### Countries not showing
 - **Verify server is running** on http://localhost:5000
 - **Check browser console** for CORS errors
+- A toast notification will appear if a country name in `countries.json` can't be matched to the map data
+
+### Add Visit form seems slow
+- This is expected: each country/place name is checked against OpenStreetMap one at a time, throttled to ~1 request/second, before the visit is saved
 
 ## Next Steps
 
 Once everything is working:
 
-1. **Edit your data**: Open `server/countries.txt` in a text editor
-2. **Replace sample data** with your actual travels
+1. **Edit your data**: Open `server/countries.json` in a text editor
+2. **Replace sample data** with your actual travels (see README for the JSON entry format)
 3. **Restart the server** to see your data
 4. Or use the "+ Add Visit" button to add entries one by one
 
