@@ -3,6 +3,7 @@ from flask_cors import CORS
 from datetime import datetime
 import os
 import json
+import tempfile
 
 app = Flask(__name__)
 CORS(app)
@@ -11,7 +12,12 @@ COUNTRIES_FILE = 'countries.json'
 GEOCODE_CACHE_FILE = 'geocode_cache.json'
 
 def parse_countries_file():
-    """Parse the countries.json file and return structured data sorted by dateFrom."""
+    """Parse the countries.json file and return structured data sorted by dateFrom.
+
+    Raises if the file exists but can't be read/parsed, so callers don't mistake
+    an unreadable file for "there are no visits" (which would otherwise lead
+    add_country() to overwrite real data with just the new entry).
+    """
     if not os.path.exists(COUNTRIES_FILE):
         return []
 
@@ -27,15 +33,17 @@ def parse_countries_file():
         entries.sort(key=lambda x: x['dateFrom'])
 
         return entries
-    except json.JSONDecodeError as json_err:
-        print(f"Error parsing countries.json at line {json_err.lineno}, column {json_err.colno}: {json_err.msg}")
-        return []
     except Exception as e:
-        print(f"Error reading countries.json: {str(e)}")
-        return []
+        print(f"Error reading {COUNTRIES_FILE}: {e}")
+        raise
 
 def write_countries_file(entries):
-    """Write entries back to countries.json file."""
+    """Write entries back to countries.json file.
+
+    Writes to a temp file first and swaps it into place with os.replace()
+    (atomic on both POSIX and Windows) so a crash or error mid-write can't
+    leave countries.json truncated or partially written.
+    """
     # Sort by dateFrom before writing
     entries_sorted = sorted(entries, key=lambda x: x['dateFrom'])
 
@@ -51,8 +59,15 @@ def write_countries_file(entries):
         }
         entries_to_write.append(entry_copy)
 
-    with open(COUNTRIES_FILE, 'w', encoding='utf-8') as f:
-        json.dump(entries_to_write, f, indent=2, ensure_ascii=False)
+    directory = os.path.dirname(os.path.abspath(COUNTRIES_FILE)) or '.'
+    fd, tmp_path = tempfile.mkstemp(dir=directory, prefix='.countries_', suffix='.tmp')
+    try:
+        with os.fdopen(fd, 'w', encoding='utf-8') as f:
+            json.dump(entries_to_write, f, indent=2, ensure_ascii=False)
+        os.replace(tmp_path, COUNTRIES_FILE)
+    except Exception:
+        os.remove(tmp_path)
+        raise
 
 @app.route('/api/countries', methods=['GET'])
 def get_countries():
