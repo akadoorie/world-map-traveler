@@ -50,7 +50,8 @@ App
 │   ├── Title (h1)
 │   ├── Counter
 │   │   ├── unique-country count + label
-│   │   ├── days-abroad count + label
+│   │   ├── days-abroad (total) — distinct calendar days across all visible entries, deduplicated
+│   │   ├── days-abroad (current) — just the currently selected entry's own day span
 │   │   └── current country / area / year badge
 │   └── Header Buttons
 │       ├── Refresh (re-fetches countries.json)
@@ -148,8 +149,13 @@ If any validation fails → show inline error, stop (nothing is saved)
      ↓
 onSubmit() → axios.post('/api/countries', { dateFrom, dateTo, country, area, places })
      ↓
-Flask: parse_countries_file() → append new entry → write_countries_file()
-      (re-sorts by dateFrom, strips id, writes full file back)
+Flask: parse_countries_file() — raises if countries.json can't be read/parsed;
+       if it raises, the request 500s here and write_countries_file() is never
+       called, so a broken file is never overwritten with just the new entry
+     ↓ (read succeeded)
+append new entry → write_countries_file()
+      (re-sorts by dateFrom, strips id, writes to a temp file, then
+      os.replace()s it into place — all-or-nothing, never a partial write)
      ↓
 Return success response
      ↓
@@ -194,8 +200,13 @@ For each pair not already rendered:
 visibleEntries   = entries.slice(0, currentIndex + 1)
 uniqueCountries  = new Set(visibleEntries.map(e => e.country))
 countryCount     = uniqueCountries.size
-totalDaysAbroad  = sum of (dateTo - dateFrom + 1) over visibleEntries
+totalDaysAbroad  = count of distinct calendar dates covered by the union of
+                   visibleEntries' [dateFrom, dateTo] ranges (a Set of day-keys,
+                   not a per-entry sum — overlapping/nested ranges, e.g. a day
+                   trip during a longer stay, aren't double-counted)
 currentEntry     = visibleEntries[visibleEntries.length - 1] (or null)
+currentPlaceDays = totalDaysAbroad-style day count applied to just [currentEntry]
+                   (i.e. that one entry's own dateTo - dateFrom + 1)
 currentCountry   = currentEntry?.country
 currentArea      = currentEntry?.area
 currentYear      = year of currentEntry?.dateFrom
@@ -399,6 +410,7 @@ Standard HTTP methods and JSON response envelopes (`{success, data | error}`).
 
 ### Backend
 - Simple file I/O: the full `countries.json` is read and rewritten on every request — fine at the scale this app targets, but means a request's cost scales with total entry count
+- Writes go through a temp-file + `os.replace()` swap rather than truncating the file in place, so a crash or an unreadable file can't leave `countries.json` partially written
 - No complex database queries
 - Efficient parsing
 
@@ -445,11 +457,15 @@ Error Occurs
 Try/Catch Block
     ↓
 Non-fatal data issue (bad country name, bad date range, geocode miss)?
-    ↓ yes                                   ↓ no (fetch/API failure)
-Toast via onWarning(), deduped by key   Log to console, set `error` state
-    ↓                                        ↓
-App keeps rendering normally            Show full-page error view with Retry button
+    ↓ yes                                   ↓ no (fetch/API failure, including
+Toast via onWarning(), deduped by key        a countries.json that fails to
+    ↓                                        parse — see below)
+App keeps rendering normally            Log to console, set `error` state
+                                             ↓
+                                         Show full-page error view with Retry button
 ```
+
+Note: `parse_countries_file()` used to swallow read/parse failures and silently return an empty list, which meant a broken `countries.json` looked identical to "zero visits" — and worse, the *next* `add_country()` call would then overwrite the real file with just the one new entry. It now re-raises, so this is a real `error` path (loud 500, `write_countries_file()` never reached), not a silent one. See `CLAUDE.md` for the exact mechanism.
 
 ## Development Workflow
 

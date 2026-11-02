@@ -17,7 +17,7 @@
 - **Interactive World Map**: Country-border visualization powered by Leaflet.js
 - **Configurable Map Sources**: Switch between 6 tile providers (ArcGIS Ocean, OpenStreetMap, Stamen Terrain, CartoDB Positron, Esri Satellite, CartoDB Dark) from a dropdown in the top-right corner
 - **Timeline Navigation**: Step through your travel history chronologically with arrow keys or the on-screen controls (including jump-to-first/jump-to-last)
-- **Country Counter**: Real-time counter of unique countries visited, plus total days spent abroad
+- **Country Counter**: Real-time counter of unique countries visited, plus two days-abroad counters — a deduplicated running total and the length of just the currently selected visit
 - **Current Country Badge**: Shows the year, country, and (optional) area/region of your current position in the timeline
 - **Detailed Tooltips**: Hover over a visited country to see every visit's dates and places
 - **Place Markers**: Red dots mark specific locations, geocoded on demand via OpenStreetMap's Nominatim service
@@ -199,8 +199,9 @@ Before saving, the app validates the country and every place against OpenStreetM
 
 ### Country Counter
 - Shows the total number of unique countries visited up to the current point in your timeline
-- Shows total days abroad across all visible visits
-- If you visit a country multiple times, it's only counted once toward the country total (but each visit still adds its days)
+- **Days abroad (total)**: the number of distinct calendar days covered by every visible visit, with overlapping date ranges (e.g. a day trip to a neighboring country during a longer trip) counted once, not twice
+- **Days Abroad (current)**: just the length of the single visit you're currently viewing (`dateTo - dateFrom + 1`), shown next to the total
+- If you visit a country multiple times, it's only counted once toward the country total (but each visit still adds its days to the total)
 - Reaches the final count when you navigate to the last entry
 
 ### Refreshing Data
@@ -349,6 +350,7 @@ Server-side proxy to Nominatim used by the "Add Visit" form to check a country o
 - **Countries not appearing**: Ensure country names in `countries.json` match the GeoJSON data (standard English names) — a toast warning will tell you if a name couldn't be matched
 - **Place markers missing / "Location not found" warnings**: The place name may not be resolvable by Nominatim, or the lookup may still be in flight — geocoding is throttled to roughly 1 request/second
 - **"Add Visit" taking a while**: Expected for entries with multiple places — each place is validated against Nominatim sequentially at ~1 request/second
+- **App shows a "Failed to load countries data" error with a Retry button**: `countries.json` exists but couldn't be parsed (invalid JSON, or an entry missing `dateFrom`). The app deliberately refuses to proceed rather than guessing — fix the file by hand and click Retry. It will never overwrite the file for you in this state, so your data is safe while you fix it.
 
 ## Customization
 

@@ -93,7 +93,7 @@ Your browser will automatically open to http://localhost:3000
 - Click "Open in Google Maps" to view the location in Google Maps
 
 ### ✓ Counters
-- The header shows unique countries visited, total days abroad, and the current country/area/year for your position in the timeline
+- The header shows unique countries visited, "Days abroad (total)" (deduplicated across all visible visits — a day trip during a longer stay isn't double-counted), "Days Abroad (current)" (just the visit you're currently viewing), and the current country/area/year for your position in the timeline
 
 ### ✓ Map Source Toggle
 - Click the dropdown button in the top-right of the map and switch between ArcGIS Ocean, OpenStreetMap, Stamen Terrain, CartoDB Positron, Esri Satellite, and CartoDB Dark
@@ -136,6 +136,7 @@ The app comes with 5 sample visits (auto-generated in `countries.json` on first 
 - **Verify server is running** on http://localhost:5000
 - **Check browser console** for CORS errors
 - A toast notification will appear if a country name in `countries.json` can't be matched to the map data
+- If instead you see a full-page "Failed to load countries data" error with a Retry button, `countries.json` itself is invalid (bad JSON, or an entry missing `dateFrom`) — fix the file and click Retry; the app won't touch the file while it's in this state
 
 ### Add Visit form seems slow
 - This is expected: each country/place name is checked against OpenStreetMap one at a time, throttled to ~1 request/second, before the visit is saved

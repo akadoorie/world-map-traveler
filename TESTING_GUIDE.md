@@ -20,11 +20,11 @@ Before testing, ensure:
 2. Wait for the map to load
 
 **Expected Results**:
-- ✅ Map appears with light blue oceans
-- ✅ Land areas are light gray
-- ✅ One country (France) is highlighted in purple/blue
+- ✅ Map appears with the default ArcGIS Ocean basemap (ocean/land colors come from the selected tile source, not a fixed app color)
+- ✅ One country (France) is highlighted in red (`#ef4444` — the "current" color; a country with more than one earlier visit would show teal `#10b981` instead)
 - ✅ Header shows "World Map Traveler"
 - ✅ Counter shows "1 Country Visited"
+- ✅ A "Days abroad (total)" counter shows 11 (Jan 15–25 inclusive) and a "Days Abroad (current)" counter shows the same value (11) since there's only one visible entry
 - ✅ Progress indicator shows "1/5"
 - ✅ Left arrow is disabled (grayed out)
 - ✅ Right arrow is enabled
@@ -244,6 +244,11 @@ Before testing, ensure:
 - ✅ Errors appear in red box above form
 - ✅ Form doesn't submit with errors
 
+**Additional check — unresolvable location**: fill in a nonsense country name (e.g. "Zzzznotarealplace") with valid dates and submit.
+- ✅ A "Validating country location..." message appears first (the app checks the name against OpenStreetMap before saving)
+- ✅ After a short delay, an error appears: `Country "Zzzznotarealplace" could not be found. Please check the spelling.`
+- ✅ Nothing is saved
+
 ---
 
 ### Test 9: Add Country Form - Success
@@ -257,7 +262,7 @@ Before testing, ensure:
    - To Date: "2023-07-10"
    - Places: "Athens, Santorini"
 3. Click "Add Visit"
-4. Wait for form to close
+4. Wait for form to close — this takes a few seconds, not instantly: the app validates "Greece" and then each place against OpenStreetMap one at a time (~1 request/second), showing a "Validating..." status message while it does
 5. Press Right Arrow until you reach the last entry
 6. Observe Greece is now in the list
 
@@ -324,23 +329,23 @@ Before testing, ensure:
 ---
 
 ### Test 12: Map Visual Styling
-**Purpose**: Verify map appearance matches requirements.
+**Purpose**: Verify map appearance matches current behavior.
 
 **Checks**:
-- ✅ Ocean/seas are light blue (#a8daff or similar)
-- ✅ Unvisited land is light gray (#e0e0e0 or similar)
-- ✅ Visited countries are purple/blue (#667eea or similar)
+- ✅ Unvisited land is tan (`#d2b48c`)
+- ✅ Previously-visited countries (not the current one) are teal/green (`#10b981`)
+- ✅ The single most-recent (current) country is red (`#ef4444`)
+- ✅ Ocean/basemap appearance depends on whichever tile source is selected in the map-source dropdown (top-right) — this is expected, not a bug; switch sources and confirm the basemap changes while the three highlight colors above stay the same
 - ✅ Country borders are visible
-- ✅ Borders are thin gray lines
 - ✅ Map is crisp and clear
 - ✅ Zoom controls work
 - ✅ Dragging works
 
 **Steps**:
-1. Visually inspect the map
-2. Try zooming in/out
-3. Try dragging the map
-4. Check color accuracy
+1. Visually inspect the map at the default basemap
+2. Switch basemaps via the dropdown and confirm highlight colors are unaffected
+3. Try zooming in/out
+4. Try dragging the map
 
 ---
 
@@ -384,11 +389,22 @@ Before testing, ensure:
 5. Expected: Error message appears
 
 **Test C: Invalid Data**
-1. Edit server/countries.txt
-2. Add a line with malformed data
-3. Restart server
-4. Refresh client
-5. Expected: App handles gracefully (skips bad line or shows error)
+1. Back up `server/countries.json`, then edit it to make it invalid (e.g. delete the closing `]`, or remove the `"dateFrom"` key from one entry)
+2. Refresh the client (no need to restart the server)
+3. Expected: the app shows its full-page "Failed to load countries data" error with a Retry button — **not** a blank map or an empty-looking state
+4. While still corrupted, try "+ Add Visit" with any valid entry
+5. Expected: an error appears and nothing is saved
+6. Restore the backup, click Retry (or refresh)
+7. Expected: the app loads normally again, and `countries.json` still has all its original entries — the broken state was never overwritten (see Test 14D)
+
+**Test D: Corrupted File Doesn't Get Overwritten (regression test)**
+This specifically checks a past bug where a broken `countries.json` would get silently replaced by a file containing only the newest "Add Visit" entry, wiping everything else.
+1. Back up `server/countries.json`
+2. Corrupt it the same way as Test C (e.g. delete the trailing `]`)
+3. With the server running, try "+ Add Visit" with a valid entry (via the UI, or `curl -X POST http://localhost:5000/api/countries -H "Content-Type: application/json" -d '{"dateFrom":"2099-01-01","dateTo":"2099-01-02","country":"Testland"}'` if the UI won't let you reach the form from the error screen)
+4. Expected: the request fails with an error
+5. Open `countries.json` on disk and confirm it's **unchanged** — still just the corrupted version, not replaced with a file containing only "Testland"
+6. Restore the backup
 
 ---
 
@@ -405,7 +421,7 @@ Before testing, ensure:
 7. Verify Sweden appears
 
 **Expected Results**:
-- ✅ Data is saved to countries.txt
+- ✅ Data is saved to `countries.json`
 - ✅ Data persists after server restart
 - ✅ Data persists after browser close
 - ✅ All details are correct
@@ -524,6 +540,48 @@ Before testing, ensure:
 
 ---
 
+### Test 21: Map Source Toggle
+**Purpose**: Verify the tile-provider dropdown works.
+
+**Steps**:
+1. Click the map-style button in the top-right corner of the map
+2. Select each of the 6 options in turn: ArcGIS Ocean, OpenStreetMap, Stamen Terrain, CartoDB Positron, Esri Satellite, CartoDB Dark
+
+**Expected Results**:
+- ✅ Dropdown shows all 6 sources with a checkmark next to the active one
+- ✅ Selecting a source swaps the basemap instantly, without a page reload
+- ✅ Country highlight colors (tan/teal/red) stay the same regardless of basemap
+- ✅ Clicking outside the dropdown closes it without changing the selection
+
+---
+
+### Test 22: Refresh Button
+**Purpose**: Verify the header's Refresh button re-reads data from disk.
+
+**Steps**:
+1. With the app open, edit `server/countries.json` directly in a text editor (e.g. tweak a date or add an entry) and save
+2. Without restarting the server or reloading the browser, click the "Refresh" button in the header
+
+**Expected Results**:
+- ✅ The app re-fetches and reflects your manual edit without a full page reload
+- ✅ Your current timeline position/selection behaves reasonably after the refresh (the entry list may have shifted if you added/removed something)
+
+---
+
+### Test 23: Area Field
+**Purpose**: Verify the optional "Area" field on Add Visit and its display.
+
+**Steps**:
+1. Click "+ Add Visit"
+2. Fill in Country: "Spain", From: "2024-03-01", To: "2024-03-05", Area: "Barcelona", Places: "Barcelona"
+3. Submit and navigate to the new entry
+
+**Expected Results**:
+- ✅ The "Current Country" badge shows the year, "Spain", and "(Barcelona)" next to it
+- ✅ Leaving Area blank on a different entry doesn't show an empty "()" — the area suffix only appears when one is set
+
+---
+
 ## Test Results Summary
 
 Use this checklist to track your testing:
@@ -542,13 +600,16 @@ Use this checklist to track your testing:
 - [ ] Test 11: Multiple Places Parsing
 - [ ] Test 12: Map Visual Styling
 - [ ] Test 13: Responsive Behavior
-- [ ] Test 14: Error Handling
+- [ ] Test 14: Error Handling (incl. Test D: corrupted-file regression check)
 - [ ] Test 15: Data Persistence
 - [ ] Test 16: Progress Indicator
 - [ ] Test 17: Button States
 - [ ] Test 18: Animation Smoothness
 - [ ] Test 19: Console Check
 - [ ] Test 20: Full User Journey
+- [ ] Test 21: Map Source Toggle
+- [ ] Test 22: Refresh Button
+- [ ] Test 23: Area Field
 
 ---
 

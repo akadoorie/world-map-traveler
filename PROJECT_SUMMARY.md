@@ -11,6 +11,7 @@ A web application for tracking and visualizing world travels with an interactive
 - ✅ CORS enabled for frontend communication (currently no origin restriction — see Security Considerations)
 - ✅ Sample data auto-generation on first run
 - ✅ Error handling and required-field validation
+- ✅ Fail-safe data writes: a `countries.json` that can't be read/parsed causes a loud error rather than being silently treated as empty, and writes go through a temp-file + atomic replace so a crash or bad read can't leave the file partially written
 - ✅ Server-side proxy to OpenStreetMap Nominatim for geocoding and location-name validation
 
 ### Frontend (React + Leaflet.js)
@@ -48,7 +49,8 @@ A web application for tracking and visualizing world travels with an interactive
 
 4. **Country Counter & Current-Position Badge**
    - Unique countries visited, updated in real time
-   - Total days abroad across all visible visits
+   - "Days abroad (total)": distinct calendar days across all visible visits, deduplicated so overlapping ranges (e.g. a day trip during a longer stay) aren't double-counted
+   - "Days Abroad (current)": just the length of the single visit currently selected in the timeline
    - Current country, optional area/region, and year of the current timeline position
 
 5. **Interactive Tooltips**
@@ -241,6 +243,7 @@ This is the simple case. See `ARCHITECTURE.md` for the fuller picture, including
 3. **XSS Prevention**: React's built-in escaping for rendered text; note that `WorldMap.js` does build some popup HTML via string concatenation (`layer.bindPopup(...)`) rather than React, so it relies on the underlying data (country/place names, dates) being trusted input rather than on React's escaping
 4. **Error Handling**: No sensitive data in error messages
 5. **Secrets**: No API keys are used anywhere (Nominatim and the GeoJSON source are both free/keyless), so there's nothing to leak via config
+6. **Data Safety**: Reads of `countries.json` that fail (bad JSON, a missing field) raise rather than being treated as "no data," and writes are atomic (temp file + `os.replace()`) — a past bug let a broken read cause the *next* "Add Visit" to overwrite the real file with just the new entry; both parts of that are now fixed
 
 ## Future Enhancement Ideas
 
