@@ -117,6 +117,7 @@ function App() {
   const currentCountry = currentEntry ? currentEntry.country : null;
   const currentArea = currentEntry ? currentEntry.area : null;
   const currentYear = currentEntry ? new Date(currentEntry.dateFrom).getFullYear() : null;
+  const currentPlaceDays = currentEntry ? calculateTotalDaysAbroad([currentEntry]) : null;
 
   if (loading) {
     return (
@@ -140,7 +141,7 @@ function App() {
     <div className="app">
       <header className="app-header">
         <h1>World Map Traveler</h1>
-        <Counter count={countryCount} total={entries.length} daysAbroad={totalDaysAbroad} currentCountry={currentCountry} currentArea={currentArea} currentYear={currentYear} />
+        <Counter count={countryCount} total={entries.length} daysAbroad={totalDaysAbroad} currentPlaceDays={currentPlaceDays} currentCountry={currentCountry} currentArea={currentArea} currentYear={currentYear} />
         <div className="header-buttons">
           <button
             className="refresh-button"

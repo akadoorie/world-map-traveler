@@ -1,7 +1,7 @@
 import React from 'react';
 import './Counter.css';
 
-const Counter = ({ count, total, daysAbroad, currentCountry, currentArea, currentYear }) => {
+const Counter = ({ count, total, daysAbroad, currentPlaceDays, currentCountry, currentArea, currentYear }) => {
   return (
     <div className="counter-container">
       <div className="counter">
@@ -13,7 +13,13 @@ const Counter = ({ count, total, daysAbroad, currentCountry, currentArea, curren
       {daysAbroad !== undefined && (
         <div className="counter">
           <div className="counter-value">{daysAbroad}</div>
-          <div className="counter-label">Days Abroad</div>
+          <div className="counter-label">Days abroad (total)</div>
+        </div>
+      )}
+      {currentPlaceDays !== null && currentPlaceDays !== undefined && (
+        <div className="counter">
+          <div className="counter-value">{currentPlaceDays}</div>
+          <div className="counter-label">Days Abroad (current)</div>
         </div>
       )}
       {currentCountry && (
